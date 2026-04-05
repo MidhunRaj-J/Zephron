@@ -17,6 +17,12 @@ const elements = {
 	taskList: document.getElementById("task-list"),
 	noteInput: document.getElementById("note-input"),
 	noteList: document.getElementById("note-list"),
+	reminderForm: document.getElementById("reminder-form"),
+	reminderText: document.getElementById("reminder-text"),
+	reminderDate: document.getElementById("reminder-date"),
+	reminderTime: document.getElementById("reminder-time"),
+	reminderList: document.getElementById("reminder-list"),
+	notificationPermission: document.getElementById("notification-permission"),
 	messageCount: document.getElementById("message-count"),
 	taskCount: document.getElementById("task-count"),
 	noteCount: document.getElementById("note-count"),
@@ -52,6 +58,15 @@ function loadState() {
 				notes: [
 					{ id: cryptoRandomId(), text: "Zephron is now a browser-first assistant dashboard." },
 				],
+				reminders: [
+					{
+						id: cryptoRandomId(),
+						text: "Review Zephron reminder integrations",
+						dueAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+						completed: false,
+						notified: false,
+					},
+				],
 				voice: false,
 			};
 		}
@@ -60,6 +75,7 @@ function loadState() {
 			messages: Array.isArray(parsed.messages) && parsed.messages.length ? parsed.messages : [DEFAULT_GREETING],
 			tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
 			notes: Array.isArray(parsed.notes) ? parsed.notes : [],
+			reminders: Array.isArray(parsed.reminders) ? parsed.reminders : [],
 			voice: Boolean(parsed.voice),
 		};
 	} catch (error) {
@@ -67,6 +83,7 @@ function loadState() {
 			messages: [DEFAULT_GREETING],
 			tasks: [],
 			notes: [],
+			reminders: [],
 			voice: false,
 		};
 	}
@@ -174,10 +191,42 @@ function renderNotes() {
 	elements.noteCount.textContent = String(state.notes.length);
 }
 
+function formatReminderDue(dueAt) {
+	return new Intl.DateTimeFormat(undefined, {
+		weekday: "short",
+		month: "short",
+		day: "numeric",
+		hour: "numeric",
+		minute: "2-digit",
+	}).format(new Date(dueAt));
+}
+
+function renderReminders() {
+	const activeReminders = state.reminders.filter((reminder) => !reminder.completed);
+	elements.reminderList.innerHTML = activeReminders
+		.map(
+			(reminder) => `
+				<li class="list-item reminder-item">
+					<div class="reminder-copy">
+						<span>${escapeHtml(reminder.text)}</span>
+						<small>${escapeHtml(formatReminderDue(reminder.dueAt))}</small>
+					</div>
+					<div class="reminder-actions">
+						<button class="ghost-button" type="button" data-reminder-email="${reminder.id}">Email</button>
+						<button class="ghost-button" type="button" data-reminder-calendar="${reminder.id}">Calendar</button>
+						<button class="icon-button remove-button" type="button" data-reminder-delete="${reminder.id}">×</button>
+					</div>
+				</li>
+			`,
+		)
+		.join("");
+}
+
 function renderAll() {
 	renderMessages();
 	renderTasks();
 	renderNotes();
+	renderReminders();
 	elements.voiceToggle.textContent = voiceEnabled ? "Voice on" : "Voice off";
 }
 
@@ -235,6 +284,107 @@ function clearAllNotes() {
 	saveState();
 	renderNotes();
 	setContext("Notes cleared.", "Capture");
+}
+
+function requestNotificationPermission() {
+	if (!("Notification" in window)) {
+		setContext("Notifications are not supported in this browser.", "Reminders");
+		return;
+	}
+	Notification.requestPermission().then((permission) => {
+		if (permission === "granted") {
+			setContext("Desktop alerts enabled.", "Reminders");
+			return;
+		}
+		setContext("Desktop alerts are blocked.", "Reminders");
+	});
+}
+
+function buildReminderIcs(reminder) {
+	const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+	const start = new Date(reminder.dueAt).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+	const uid = `${reminder.id}@zephron.local`;
+	return [
+		"BEGIN:VCALENDAR",
+		"VERSION:2.0",
+		"PRODID:-//Zephron//EN",
+		"CALSCALE:GREGORIAN",
+		"BEGIN:VEVENT",
+		`UID:${uid}`,
+		`DTSTAMP:${stamp}`,
+		`DTSTART:${start}`,
+		`SUMMARY:${reminder.text.replaceAll("\n", " ")}`,
+		"END:VEVENT",
+		"END:VCALENDAR",
+	].join("\r\n");
+}
+
+function downloadTextFile(filename, content, mimeType) {
+	const blob = new Blob([content], { type: mimeType });
+	const url = URL.createObjectURL(blob);
+	const link = document.createElement("a");
+	link.href = url;
+	link.download = filename;
+	document.body.appendChild(link);
+	link.click();
+	link.remove();
+	URL.revokeObjectURL(url);
+}
+
+function addReminder(text, dueAt) {
+	const trimmed = text.trim();
+	if (!trimmed || !dueAt) {
+		return false;
+	}
+	state.reminders.unshift({
+		id: cryptoRandomId(),
+		text: trimmed,
+		dueAt,
+		completed: false,
+		notified: false,
+	});
+	saveState();
+	renderReminders();
+	setContext(`Reminder scheduled: ${trimmed}`, "Reminders");
+	return true;
+}
+
+function removeReminder(reminderId) {
+	state.reminders = state.reminders.filter((reminder) => reminder.id !== reminderId);
+	saveState();
+	renderReminders();
+}
+
+function openReminderEmail(reminder) {
+	const subject = encodeURIComponent(`Zephron reminder: ${reminder.text}`);
+	const body = encodeURIComponent(`Reminder: ${reminder.text}\nDue: ${formatReminderDue(reminder.dueAt)}\n\nSent from Zephron.`);
+	window.open(`mailto:?subject=${subject}&body=${body}`, "_blank", "noopener,noreferrer");
+}
+
+function exportReminderCalendar(reminder) {
+	downloadTextFile(`zephron-reminder-${reminder.id}.ics`, buildReminderIcs(reminder), "text/calendar;charset=utf-8");
+}
+
+function tickReminders() {
+	const now = Date.now();
+	let changed = false;
+
+	state.reminders.forEach((reminder) => {
+		if (!reminder.completed && !reminder.notified && Date.parse(reminder.dueAt) <= now) {
+			reminder.notified = true;
+			changed = true;
+			addMessage("assistant", `Reminder due: ${reminder.text}`);
+			setContext(`Reminder due: ${reminder.text}`, "Reminders");
+			if ("Notification" in window && Notification.permission === "granted") {
+				new Notification("Zephron reminder", { body: reminder.text });
+			}
+		}
+	});
+
+	if (changed) {
+		saveState();
+		renderReminders();
+	}
 }
 
 function parseTaskCommand(text) {
@@ -305,8 +455,19 @@ function respond(input) {
 		return "Tasks cleared.";
 	}
 
+	const reminderMatch = text.match(/^remind me(?: on| at| tomorrow)?(?:\s+)?(?:to\s+)?(.+)$/i);
+	if (reminderMatch && reminderMatch[1]) {
+		const defaultDue = new Date(Date.now() + 60 * 60 * 1000);
+		addReminder(reminderMatch[1].trim(), defaultDue.toISOString());
+		return `I set a reminder for ${reminderMatch[1].trim()} in about an hour.`;
+	}
+
 	if (lower.includes("list my tasks") || lower === "tasks" || lower.includes("show tasks")) {
 		return summarizeTasks();
+	}
+
+	if (lower.includes("list reminders") || lower.includes("show reminders")) {
+		return state.reminders.length ? `You have ${state.reminders.length} reminders saved.` : "You do not have any reminders yet.";
 	}
 
 	if (lower.includes("what time") || lower.includes("current time")) {
@@ -318,7 +479,7 @@ function respond(input) {
 	}
 
 	if (lower.includes("help")) {
-		return "Try: add task, save note, list my tasks, what time is it, or tell me to open a website.";
+		return "Try: add task, save note, remind me to..., list reminders, what time is it, or tell me to open a website.";
 	}
 
 	if (lower.includes("open ")) {
@@ -466,6 +627,45 @@ function wireEvents() {
 		}
 	});
 	elements.clearNotes.addEventListener("click", clearAllNotes);
+	elements.notificationPermission.addEventListener("click", requestNotificationPermission);
+	elements.reminderForm.addEventListener("submit", (event) => {
+		event.preventDefault();
+		const text = elements.reminderText.value;
+		const date = elements.reminderDate.value;
+		const time = elements.reminderTime.value || "09:00";
+		if (!date) {
+			setContext("Pick a reminder date first.", "Reminders");
+			return;
+		}
+		const dueAt = new Date(`${date}T${time}`).toISOString();
+		if (addReminder(text, dueAt)) {
+			elements.reminderText.value = "";
+			elements.reminderDate.value = "";
+			elements.reminderTime.value = "";
+		}
+	});
+	elements.reminderList.addEventListener("click", (event) => {
+		const emailButton = event.target.closest("[data-reminder-email]");
+		if (emailButton) {
+			const reminder = state.reminders.find((item) => item.id === emailButton.getAttribute("data-reminder-email"));
+			if (reminder) {
+				openReminderEmail(reminder);
+			}
+		}
+
+		const calendarButton = event.target.closest("[data-reminder-calendar]");
+		if (calendarButton) {
+			const reminder = state.reminders.find((item) => item.id === calendarButton.getAttribute("data-reminder-calendar"));
+			if (reminder) {
+				exportReminderCalendar(reminder);
+			}
+		}
+
+		const deleteButton = event.target.closest("[data-reminder-delete]");
+		if (deleteButton) {
+			removeReminder(deleteButton.getAttribute("data-reminder-delete"));
+		}
+	});
 	elements.micButton.addEventListener("click", () => {
 		if (!recognition) {
 			return;
@@ -493,7 +693,9 @@ function initialize() {
 	updateClock();
 	renderAll();
 	wireEvents();
+	tickReminders();
 	setInterval(updateClock, 1000);
+	setInterval(tickReminders, 30000);
 	setStatus("Ready");
 	setContext("Ready for a command.", voiceEnabled ? "Voice" : "Focus");
 
@@ -504,6 +706,12 @@ function initialize() {
 	quickActions.forEach((button) => {
 		button.setAttribute("type", "button");
 	});
+
+	if ("Notification" in window && Notification.permission === "default") {
+		elements.notificationPermission.textContent = "Enable alerts";
+	} else if ("Notification" in window && Notification.permission === "granted") {
+		elements.notificationPermission.textContent = "Alerts on";
+	}
 }
 
 window.addEventListener("load", initialize);

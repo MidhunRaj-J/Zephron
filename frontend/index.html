@@ -142,6 +142,25 @@
                         </div>
                         <ul id="note-list" class="list"></ul>
                     </article>
+
+                    <article class="panel reminder-panel">
+                        <div class="panel-header compact">
+                            <div>
+                                <p class="eyebrow">Integrations</p>
+                                <h3>Reminders</h3>
+                            </div>
+                            <button class="ghost-button" id="notification-permission" type="button">Enable alerts</button>
+                        </div>
+                        <form id="reminder-form" class="reminder-form">
+                            <input id="reminder-text" type="text" placeholder="Remind me to..." />
+                            <div class="reminder-grid">
+                                <input id="reminder-date" type="date" />
+                                <input id="reminder-time" type="time" />
+                            </div>
+                            <button class="action-button primary" type="submit">Schedule reminder</button>
+                        </form>
+                        <ul id="reminder-list" class="list"></ul>
+                    </article>
                 </aside>
             </section>
         </main>

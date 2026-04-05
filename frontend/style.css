@@ -489,6 +489,43 @@ textarea {
     text-decoration: line-through;
 }
 
+.reminder-panel {
+    display: grid;
+    gap: 16px;
+}
+
+.reminder-form {
+    display: grid;
+    gap: 12px;
+}
+
+.reminder-grid {
+    display: grid;
+    grid-template-columns: 1fr 0.8fr;
+    gap: 10px;
+}
+
+.reminder-item {
+    align-items: flex-start;
+}
+
+.reminder-copy {
+    display: grid;
+    gap: 6px;
+}
+
+.reminder-copy small {
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+.reminder-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
 .remove-button {
     width: 36px;
     height: 36px;
@@ -599,5 +636,13 @@ button:focus-visible {
 
     .stats-grid {
         grid-template-columns: 1fr;
+    }
+
+    .reminder-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .reminder-actions {
+        justify-content: flex-start;
     }
 }
