@@ -4,169 +4,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Zephron is a local personal assistant dashboard for tasks, notes, and quick commands.">
-    <title>Zephron | Personal Assistant</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="description" content="Zephron is a futuristic Jarvis-style local voice assistant with continuous listening and voice replies.">
+    <title>Zephron | Crimson Core</title>
+    <link rel="stylesheet" href="./style.css?v=20260406b">
 </head>
 
 <body>
-    <div class="ambient">
-        <span class="orb orb-a"></span>
-        <span class="orb orb-b"></span>
-        <span class="orb orb-c"></span>
-    </div>
-
-    <div class="app-shell">
-        <header class="topbar">
-            <div>
-                <p class="eyebrow">Personal assistant</p>
-                <h1>Zephron</h1>
-            </div>
-            <div class="topbar-meta">
-                <div class="status-pill" id="assistant-status">Ready</div>
-                <div class="clock-stack">
-                    <span id="clock-time">--:--</span>
-                    <span id="clock-date">--</span>
-                </div>
-            </div>
+    <main class="jarvis-shell">
+        <header class="hud">
+            <p class="label">Voice Assistant</p>
+            <h1>Zephron</h1>
+            <p class="subtitle">Crimson Core interface. Futuristic mode. Continuous listening.</p>
+            <p class="label" aria-label="Theme build">Theme build 2026.04.06-B</p>
         </header>
 
-        <main class="dashboard">
-            <section class="hero panel">
-                <div class="hero-copy">
-                    <p class="eyebrow">Local intelligence</p>
-                    <h2>Ask Zephron to organize your day, capture notes, or answer quick commands.</h2>
-                    <p class="hero-text">This build runs fully in the browser with local storage, voice support when available, and lightweight assistant replies for common personal workflows.</p>
-                    <div class="hero-actions">
-                        <button class="action-button primary" data-prompt="What can you do?">See capabilities</button>
-                        <button class="action-button" data-prompt="Add a task to review the project">Add a task</button>
-                        <button class="action-button" data-prompt="Write a note: finish Zephron this week">Save a note</button>
-                    </div>
-                </div>
-                <div class="orb-card">
-                    <div class="orb-ring"></div>
-                    <div class="orb-core">
-                        <span>Zephron</span>
-                        <strong id="focus-stat">Online</strong>
-                    </div>
-                </div>
-            </section>
-
-            <section class="workspace">
-                <article class="panel conversation-panel">
-                    <div class="panel-header">
-                        <div>
-                            <p class="eyebrow">Conversation</p>
-                            <h3>Assistant console</h3>
-                        </div>
-                        <div class="panel-tools">
-                            <button class="ghost-button" id="voice-toggle" type="button">Voice off</button>
-                            <button class="ghost-button" id="clear-chat" type="button">Clear</button>
-                        </div>
-                    </div>
-
-                    <div id="message-list" class="message-list" aria-live="polite"></div>
-
-                    <div class="quick-actions" aria-label="Quick prompts">
-                        <button class="chip" data-prompt="What time is it?">Time</button>
-                        <button class="chip" data-prompt="List my tasks">Tasks</button>
-                        <button class="chip" data-prompt="Write a note about the Zephron project">Note</button>
-                        <button class="chip" data-prompt="Help me plan the day">Plan</button>
-                    </div>
-
-                    <form id="composer" class="composer" autocomplete="off">
-                        <label class="sr-only" for="assistant-input">Ask Zephron</label>
-                        <input id="assistant-input" name="assistant-input" type="text" placeholder="Ask Zephron anything..." />
-                        <button class="action-button primary" type="submit">Send</button>
-                        <button class="icon-button" id="mic-button" type="button" aria-label="Start voice input">🎙</button>
-                    </form>
+        <section class="core" aria-label="Assistant status">
+            <div class="reactor" id="reactor"></div>
+            <div class="status-grid">
+                <article class="status-card">
+                    <span>State</span>
+                    <strong id="assistant-status">Ready</strong>
                 </article>
+                <article class="status-card">
+                    <span>Listening</span>
+                    <strong id="listen-state">Off</strong>
+                </article>
+                <article class="status-card">
+                    <span>Clock</span>
+                    <strong id="clock-time">--:--</strong>
+                </article>
+                <article class="status-card wide">
+                    <span>Last heard</span>
+                    <strong id="context-text">System online. Awaiting voice command.</strong>
+                </article>
+            </div>
+        </section>
 
-                <aside class="sidebar">
-                    <article class="panel info-panel">
-                        <div class="panel-header compact">
-                            <div>
-                                <p class="eyebrow">Snapshot</p>
-                                <h3>Today</h3>
-                            </div>
-                        </div>
-                        <div class="stats-grid">
-                            <div>
-                                <span class="stat-label">Messages</span>
-                                <strong id="message-count">0</strong>
-                            </div>
-                            <div>
-                                <span class="stat-label">Tasks</span>
-                                <strong id="task-count">0</strong>
-                            </div>
-                            <div>
-                                <span class="stat-label">Notes</span>
-                                <strong id="note-count">0</strong>
-                            </div>
-                            <div>
-                                <span class="stat-label">Mode</span>
-                                <strong id="assistant-mode">Focus</strong>
-                            </div>
-                        </div>
-                        <div class="status-card" id="context-card">
-                            <p class="stat-label">Current context</p>
-                            <p id="context-text">Ready for a command.</p>
-                        </div>
-                    </article>
+        <section class="controls" aria-label="Assistant controls">
+            <button id="speak-toggle" type="button" class="control">Voice reply: Off</button>
+            <button id="continuous-toggle" type="button" class="control primary">Always listen: Off</button>
+            <button id="mic-button" type="button" class="control">Listen once</button>
+            <button id="clear-chat" type="button" class="control">Clear log</button>
+        </section>
 
-                    <article class="panel task-panel">
-                        <div class="panel-header compact">
-                            <div>
-                                <p class="eyebrow">Tasks</p>
-                                <h3>Action list</h3>
-                            </div>
-                        </div>
-                        <form id="task-form" class="inline-form">
-                            <input id="task-input" type="text" placeholder="Add a task" />
-                            <button class="action-button secondary" type="submit">Add</button>
-                        </form>
-                        <ul id="task-list" class="list"></ul>
-                    </article>
+        <section class="console" aria-label="Conversation log">
+            <div id="message-list" class="message-list" aria-live="polite"></div>
+            <form id="composer" class="composer" autocomplete="off">
+                <label class="sr-only" for="assistant-input">Ask Zephron</label>
+                <input id="assistant-input" name="assistant-input" type="text" placeholder="Type or say: Jarvis, what time is it" />
+                <button class="control primary" type="submit">Send</button>
+            </form>
+        </section>
+    </main>
 
-                    <article class="panel notes-panel">
-                        <div class="panel-header compact">
-                            <div>
-                                <p class="eyebrow">Notes</p>
-                                <h3>Capture buffer</h3>
-                            </div>
-                        </div>
-                        <textarea id="note-input" rows="5" placeholder="Capture an idea, reminder, or next step..."></textarea>
-                        <div class="note-actions">
-                            <button class="action-button secondary" id="save-note" type="button">Save note</button>
-                            <button class="ghost-button" id="clear-notes" type="button">Clear notes</button>
-                        </div>
-                        <ul id="note-list" class="list"></ul>
-                    </article>
-
-                    <article class="panel reminder-panel">
-                        <div class="panel-header compact">
-                            <div>
-                                <p class="eyebrow">Integrations</p>
-                                <h3>Reminders</h3>
-                            </div>
-                            <button class="ghost-button" id="notification-permission" type="button">Enable alerts</button>
-                        </div>
-                        <form id="reminder-form" class="reminder-form">
-                            <input id="reminder-text" type="text" placeholder="Remind me to..." />
-                            <div class="reminder-grid">
-                                <input id="reminder-date" type="date" />
-                                <input id="reminder-time" type="time" />
-                            </div>
-                            <button class="action-button primary" type="submit">Schedule reminder</button>
-                        </form>
-                        <ul id="reminder-list" class="list"></ul>
-                    </article>
-                </aside>
-            </section>
-        </main>
-    </div>
-
-    <script src="script.js"></script>
+    <script src="./script.js?v=20260406b"></script>
 </body>
 
 </html>
